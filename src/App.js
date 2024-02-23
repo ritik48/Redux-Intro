@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { Provider, useDispatch, useSelector } from "react-redux";
-
-import store from "./store";
+import { useDispatch, useSelector } from "react-redux";
 
 import { withdraw, deposit, applyLoan, payLoan, createUser } from "./store";
 
@@ -50,11 +48,11 @@ function Account() {
 
     const dispatch = useDispatch();
 
-    const { loan, purpose } = useSelector((store) => store.account);
+    const { loan, purpose, isLoading } = useSelector((store) => store.account);
 
     function handleDeposit() {
         if (!depositAmount) return;
-        dispatch(deposit(depositAmount));
+        dispatch(deposit(depositAmount, currency));
     }
 
     function handleWithdraw() {
@@ -94,7 +92,9 @@ function Account() {
                     <option value="EUR">Euro</option>
                     <option value="GBP">British Pound</option>
                 </select>
-                <button onClick={handleDeposit}>Deposit</button>
+                <button onClick={handleDeposit} disabled={isLoading}>
+                    {isLoading ? `Converting to ${ currency }` : "Deposit"}
+                </button>
             </div>
             <div className="row">
                 <label for="withdraw">Withdraw</label>
@@ -166,7 +166,7 @@ function App() {
     const { name: user } = useSelector((store) => store.user);
     return (
         <div className="App">
-            <h1>Redux intro</h1>
+            <h1>Redux intro 💵 Bank </h1>
 
             {!user && <User />}
             {user && (

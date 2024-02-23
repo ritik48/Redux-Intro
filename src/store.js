@@ -1,9 +1,12 @@
-import { createStore, combineReducers } from "redux";
+import { createStore, combineReducers, applyMiddleware } from "redux";
+import { thunk } from "redux-thunk";
+import { composeWithDevTools } from "@redux-devtools/extension";
 
 const initialStateAccount = {
     balance: 0,
     loan: 0,
     purpose: "",
+    isLoading: false,
 };
 
 function accountReducer(state = initialStateAccount, action) {
@@ -18,6 +21,7 @@ function accountReducer(state = initialStateAccount, action) {
             return {
                 ...state,
                 balance: state.balance + action.payload,
+                isLoading: false,
             };
         case "account/applyLoan":
             if (state.loan > 0) return state;
@@ -34,14 +38,34 @@ function accountReducer(state = initialStateAccount, action) {
                 loan: 0,
                 purpose: "",
             };
+        case "account/convertingToCurrency":
+            return {
+                ...state,
+                isLoading: true,
+            };
         default:
             return state;
     }
 }
 
 // action creator
-export function deposit(amount) {
-    return { type: "account/deposit", payload: amount };
+export function deposit(amount, currency) {
+    if (currency === "USD") {
+        return { type: "account/deposit", payload: amount };
+    }
+
+    // middleware: to perform api calls before dispatching action to redux store
+    return async function (dispatch, getState) {
+        dispatch({ type: "account/convertingToCurrency" });
+
+        const host = "api.frankfurter.app";
+        const res = await fetch(
+            `https://${host}/latest?amount=${amount}&from=${currency}&to=USD`
+        );
+        const data = await res.json();
+
+        dispatch({ type: "account/deposit", payload: data.rates.USD });
+    };
 }
 
 export function withdraw(amount) {
@@ -100,5 +124,8 @@ const rootReducer = combineReducers({
     user: userReducer,
 });
 
-const store = createStore(rootReducer);
+const store = createStore(
+    rootReducer,
+    composeWithDevTools(applyMiddleware(thunk))
+);
 export default store;
